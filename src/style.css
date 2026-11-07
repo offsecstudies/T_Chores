@@ -5,3 +5,4 @@
 @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
 
 .points-card p{position:relative;z-index:1}.point-stars{bottom:65px;opacity:.75}@media(max-width:800px){.point-stars{bottom:70px;font-size:13px}.point-stars span{font-size:20px}}
+.auth-shell{max-width:580px;margin:8vh auto;padding:20px}.auth-shell h1{font-size:28px}.auth-shell .settings-panel>p{line-height:1.8}.auth-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:24px}.auth-shell [role=alert]{color:#a15340}.settings-panel>.button{margin-top:18px}

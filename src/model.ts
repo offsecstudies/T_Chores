@@ -1,0 +1,11 @@
+export type Chore = { id: string; title: string; category: string; points: number; days: number[] };
+export type Reward = { title: string; mode: 'points' | 'completion'; target: number };
+export type Week = { chores: Chore[]; completed: Record<string, boolean>; reward: Reward };
+export type Data = { version: 1; chores: Chore[]; reward: Reward; weeks: Record<string, Week> };
+export const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+export function weekKey(date = new Date()): string { const d = new Date(date.getFullYear(),date.getMonth(),date.getDate()); d.setDate(d.getDate() - (d.getDay()+6)%7); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+export function dateFor(key: string, day = 0) { const [y,m,d] = key.split('-').map(Number); return new Date(y,m-1,d+day); }
+export function seed(): Data { return {version:1,chores:[{id:'bed',title:'Make my bed',category:'My space',points:5,days:[0,1,2,3,4,5,6]},{id:'teeth',title:'Brush my teeth',category:'Self care',points:5,days:[0,1,2,3,4,5,6]},{id:'toys',title:'Put away my toys',category:'My space',points:10,days:[0,1,2,3,4,5,6]},{id:'table',title:'Help set the table',category:'Helping out',points:10,days:[0,2,4,6]},{id:'plants',title:'Water the plants',category:'Helping out',points:10,days:[1,5]}],reward:{title:'A trip to the ice cream shop',mode:'points',target:150},weeks:{}}; }
+export function ensureWeek(data: Data, key: string): Data { return data.weeks[key] ? data : {...data,weeks:{...data.weeks,[key]:{chores:structuredClone(data.chores),completed:{},reward:{...data.reward}}}}; }
+export function stats(week: Week, day?: number) { let total=0,done=0,points=0; for(const c of week.chores) for(const d of c.days) if(day===undefined || day===d){ total++; if(week.completed[`${c.id}:${d}`]) {done++;points+=c.points;} } return {total,done,points,percent:total?Math.round(done/total*100):0}; }
+export function updateSettings(data: Data, key: string, chores: Chore[], reward: Reward): Data { const next=ensureWeek(data,key); return {...next,chores,reward,weeks:{...next.weeks,[key]:{...next.weeks[key],chores:structuredClone(chores),reward:{...reward}}}}; }

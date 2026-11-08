@@ -1,77 +1,87 @@
-# Teddy Chores
+# Teddy Chores · The Everyday Quest
 
-A mobile-first, installable weekly chore tracker built with React, TypeScript and Vite. Works locally without an account; optional private syncing uses Supabase authentication and its free tier.
+A mobile-first React + TypeScript PWA. Teddy completes missions, earns gold (points), advances through knight ranks and unlocks family rewards. Local-only mode needs no account; Supabase adds private syncing and read-only guests. No paid services are required for a small personal deployment.
 
-## Run locally
+## Develop
 
-Use Node.js 22 or newer and npm.
+Use Node.js 22+ and npm:
 
 ```sh
 npm ci
 npm run dev
-```
-
-Open the URL printed by Vite. On another device on the same network, use your computer's LAN address. Development mode supports the UI; PWA installation and offline caching require the production build and HTTPS (or localhost).
-
-```sh
 npm test
 npm run build
 npm run preview
 ```
 
-The tests cover scheduling, Monday rollover, points, completion calculations and preservation of past weeks. The production build includes TypeScript checking and a generated service worker.
+The production build includes TypeScript checking, a standalone manifest, shield icons and an offline app-shell cache. Install on Android Chrome using **Install app** or **Add to home screen** after visiting the HTTPS deployment once. Localhost is also supported; a plain HTTP LAN address doesn't support PWA installation.
 
-## Using the app
+## Missions, gold and rewards
 
-- My week shows Monday–Sunday. Tap a day and check a chore to complete it; uncheck to undo.
-- Parent settings lets you add, edit or delete chores, choose individual days or every day, and set points. Use zero points for an unscored chore.
-- Choose a weekly reward based on points or completion percentage (1–100%). Rewards are an encouragement, not an automatic purchase.
-- Past weeks shows retained, read-only weekly snapshots. Only weeks opened in the app are created; unused weeks aren't fabricated.
-- Weeks follow the device's local calendar, beginning Monday. A new week starts with no completed chores; previous weeks remain stored. An open app checks rollover every 30 seconds.
-- Routine and reward edits affect the current week and future weeks. They may change current-week totals; past-week snapshots stay unchanged.
+- **Quest board:** Monday–Sunday missions, daily/weekly completion, weekly gold and a weekly bounty. Parent settings manages missions, points, days and the weekly goal. Set zero points for an unscored mission.
+- **Treasury:** all-time, this-week or custom inclusive date-range points plus a daily ledger. Totals use the mission's scheduled local calendar date, not the time a checkbox was clicked. This allows old progress to appear correctly without invented timestamps.
+- **Reward milestones:** parents can add, edit or remove multiple rewards with different lifetime point thresholds. The board and Treasury show locked/unlocked rewards. Milestones are independent of the weekly bounty, don't spend points, and aren't automatic purchases. Undoing completions may lock a milestone again; there is no redemption/payment system.
+- **Character:** lifetime points advance Teddy from Squire (0) to Apprentice knight (100), Knight (300), Guardian (750) and Champion (1,500). Gold and XP represent the same points; they are not separate currencies or real money.
+- **Quest journal:** retained weekly snapshots, read-only for previous weeks. Only opened weeks are saved; missed weeks aren't fabricated. Rollover uses the device's local Monday, checked every 30 seconds while open.
 
-## Install on Android
+New completions capture their awarded points. Editing points or deleting a mission preserves those awards; unchecking a visible mission removes its points, and rechecking awards its current value. Editing days can hide a completed mission, but its earned points remain. Legacy progress is read without changing its format: old checkmarks use the saved weekly chore values and are captured before routine edits. Points lost from missions deleted before this upgrade cannot be reconstructed.
 
-Deploy over HTTPS, open in Chrome and use **Install app** when available, or Chrome's **Add to home screen / Install app** menu. The app includes 192px and 512px icons, a standalone manifest and offline app-shell caching. Visit once online after deployment before using offline. Installation availability depends on the browser; normal web use always works. Updates are applied automatically when a newer service worker is available.
+## Vercel Hobby deployment
 
-## Deploy to Vercel Hobby
+Import the repository using the **Vite** preset. Use `npm ci`, build `npm run build`, output `dist`. No server functions or SPA rewrite rules are needed. Vercel provides HTTPS. Hobby is intended for personal, non-commercial use subject to its current terms.
 
-1. Push this repository to your GitHub account.
-2. Import it in Vercel, select the **Vite** preset and use the repository root.
-3. Build command: `npm run build`. Output directory: `dist`. Install command: `npm ci`.
-4. Deploy. Vercel supplies HTTPS, required for PWA installation. Local-only mode needs no environment variables. For syncing, follow the Supabase section below before redeploying. No Vercel server functions or paid add-ons are needed. Personal, non-commercial use can use Hobby subject to Vercel's current terms.
+Before deploying this upgrade to an existing Supabase-backed app, apply **`supabase/guest-access.sql`** in Supabase SQL Editor. For a brand-new project, run **`supabase/schema.sql` first, then `supabase/guest-access.sql`**. Both are repeatable and preserve progress. If you rerun the base schema later, rerun guest-access.sql afterward to restore the guest-aware policies.
 
-The app uses a single page with internal view state, so no SPA rewrite rules are needed. Test the deployed app online, install it, then reopen offline to verify caching on your device.
+Set these public build variables in Vercel (Production, and Preview if needed), then redeploy:
 
-## Architecture and data
+```text
+VITE_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLIC_PUBLISHABLE_KEY
+```
 
-- `src/model.ts`: typed chores, rewards and weekly snapshots; pure scheduling and progress calculations.
-- `src/storage.ts`: `ChoreRepository` storage boundary, versioned data validation and local storage adapter.
-- `src/main.tsx`: dashboard, settings and history UI.
-- `src/style.css`: responsive layout and touch-friendly controls.
-- `vite.config.ts`: PWA manifest and Workbox precache configuration.
+For local cloud mode copy `.env.example` to `.env.local`, fill in those values and restart Vite. `.env.local` is ignored by Git. A legacy public anon key also works. Never use a database password, secret API key or service-role key in frontend variables.
 
-Data is stored under `teddy-chores:v1` in this browser's local storage. It does not sync between devices or browsers. Clearing site data, using private browsing or changing origins may remove or hide progress. Read failures preserve the stored value and disable writes for that session; write failures display an alert and keep changes in memory. Without Supabase configuration there is no authentication. Cloud mode requires a parent login, but does not yet separate parent and child permissions.
+In Supabase enable Email/password sign-in, retain email confirmation for self-service accounts, and set **Authentication → URL Configuration → Site URL** to your production origin. Add `http://localhost:5173` to redirect URLs for local development. Create your parent account in the app, confirm its email and sign in. Choose **Import this device's progress** on the first device, or start fresh. Other devices signed into the same parent account load its cloud data rather than overwriting it with their local progress.
 
-`src/workspace.tsx` manages account lifecycle, local migration, device caches and sync status. `src/sync.ts` provides an asynchronous cloud repository and revision-based change merging. `supabase/schema.sql` defines account ownership and database access policies. Future separate child accounts should add household membership and role-based policies rather than sharing a parent password.
+## Read-only guest access
 
-## Enable private syncing with Supabase (free tier)
+Guests authenticate with their own Supabase Auth identity; they never use the parent password.
 
-The app now supports a shared parent account across devices. Separate child identities and permission roles are not included yet. Until configured, the existing local-only app continues working.
+1. Apply `supabase/guest-access.sql` before deploying this version.
+2. A guest can choose **Create guest account** on the sign-in screen, register an email/password and confirm the email. They see a waiting screen until invited.
+3. In the parent's **Parent settings → Guest access**, enter their email and choose **Grant access**.
+4. The guest signs in or taps Retry. They can view the Quest board, Treasury, reward milestones and journal. Checkboxes are disabled, parent forms are absent, and database RLS rejects writes regardless of client UI.
+5. **Revoke access** removes the membership. Active guest pages recheck every four seconds and stop displaying the family data when access is revoked. Revocation cannot erase information someone has already seen or captured.
 
-1. Create a free project at https://supabase.com/dashboard. Keep the database password private; it is not used by the app.
-2. Open **SQL Editor**, paste `supabase/schema.sql`, and run it once. This creates private account documents with row-level security. Anonymous users have no access; authenticated users can read/write only their own account row.
-3. In **Authentication → Providers**, enable Email/password with email confirmation. Under **URL Configuration**, set Site URL to your Vercel production origin, such as `https://your-app.vercel.app`. Add your localhost URL (`http://localhost:5173`) to Redirect URLs for development.
-4. Find your **Project URL** and **publishable key** in the project's Connect/API settings. A legacy `anon` public key also works. **Never use a secret key or service-role key in Vite or Vercel client variables.**
-5. In Vercel → project → Settings → Environment Variables, add `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` for Production (and Preview if desired). Redeploy: these public settings are bundled at build time. For local work copy `.env.example` to `.env.local`, fill in the two public values, and restart Vite. `.env.local` is ignored by Git.
-6. Create a parent account in Teddy Chores, confirm its email and sign in. On the first device choose **Import this device’s progress** to upload existing local chores/history, or **Start fresh**. Existing local data remains untouched. Sign into the same account on your other devices; those devices load the account's cloud data without overwriting it with their own local progress.
+Each guest can observe one family at a time. A parent with active guests cannot also become a guest of another family. Only accounts created as guests (or the dedicated Family identity) can be enrolled. Parent accounts cannot be forcibly switched into guest mode. Any existing personal document on a guest identity is retained rather than deleted. Child/editor roles are not included.
 
-### Sync behavior and limits
+### Shared Family username
 
-Cloud changes refresh every four seconds and on window focus/reconnection. Pending edits are cached under an account-specific local-storage key and retried automatically after network failures. Keep the same account signed in for offline use; the app requires a successful first online load before it can work offline. A paused sync shows an alert; sign-out is blocked while edits are pending. Device backups are retained on sign-out to protect unsynced work and are not displayed to other accounts; avoid shared browser profiles for private family data.
+The login form accepts **Family** (case insensitive) as an alias for **`family@teddy-chores.example`**. This is a reserved, non-delivering email address used only for the shared guest identity.
 
-Writes use revision checks and merge only changed fields, so independent checkoffs on two devices are preserved. If two devices edit the same checkbox, the last successfully applied edit wins. Chore arrays are replaced as a unit: avoid editing the routine from multiple devices simultaneously. This MVP stores the complete account document (including history) in one row, suitable for a small family; it is not designed for large multi-child households. Supabase Free projects may pause due to inactivity and have email rate limits; use the dashboard to resume a paused project.
+To set it up, use **Supabase Dashboard → Authentication → Users → Add user → Create new user**. Enter `family@teddy-chores.example`, set your chosen guest password, and mark the email **Auto Confirm User / confirmed**. Use Create, not an email invitation: the reserved address cannot receive email. Then sign in as the parent and grant access to **Family** in Parent settings. Only distribute the guest credentials after granting access.
 
-### Verify before relying on sync
+The password is held by Supabase Auth; it is never embedded in the repository, local setup scripts or browser bundle. Set or reset it through Supabase's admin user controls. App code alone cannot create a confirmed account without privileged admin access, and the app never requests a service-role key. Sharing Family credentials intentionally gives the recipients the same read-only guest identity; separate guest accounts allow individual revocation.
 
-Use two browser profiles or devices signed into the same account: check a chore on one, wait a few seconds, and verify the other updates; uncheck it in the other direction. Disconnect one device, make a change, reconnect, and confirm both converge. Create a different account and confirm it sees a fresh routine rather than your data. Verify anonymous reads are blocked by RLS. The automated tests exercise merges and conflict retries using an in-memory backend; real authentication, email delivery and deployed RLS must be verified against your own Supabase project.
+## Data and synchronization
+
+- `src/model.ts`: schedules, weekly snapshots, captured point awards, date-range totals and ranks.
+- `src/treasury.tsx`: ledger and reward milestone views.
+- `src/main.tsx`: quest dashboard, journal and parent forms.
+- `src/workspace.tsx`: auth, access resolution, local migration, owner offline queue and read-only guest workspace.
+- `src/guests.tsx`, `src/auth.ts`: access management and the public Family username alias.
+- `src/storage.ts`: validated, versioned local-only repository.
+- `src/sync.ts`: asynchronous Supabase adapter, field-level merges and revision checks.
+- `supabase/schema.sql`, `supabase/guest-access.sql`: ownership, guest membership, RLS and scoped grant/revoke functions.
+
+Local-only data uses `teddy-chores:v1`. Cloud owner data/queued changes are cached under the account ID; only previously verified owners can reopen their own cache offline. Clearing site data/private browsing may remove local data. Guests require an online connection and shared documents are kept only in memory, never in the guest's persistent app cache. Sign-out doesn't erase owner device backups. Keep private data in a dedicated browser profile.
+
+Sync refreshes every four seconds and on owner window focus/reconnection. Failed writes retain pending edits and retry automatically. Sign-out is blocked while edits are pending. Initial cloud access and expired-session sign-in require a connection. Independent completion changes merge; the last successfully applied edit wins on the same field. Chore and reward arrays are atomic—avoid simultaneous parent edits from multiple devices. One document holds the family history, appropriate for a small personal tracker rather than a large service. Supabase Free has quotas and may pause inactive projects.
+
+Guest membership is separate from that document. Only the parent can grant/revoke through security-definer functions scoped to their own account; clients cannot directly modify memberships or choose their own role. The functions serialize membership changes to prevent cycles. Public signups and user metadata never grant access to another family's data.
+
+## Validation
+
+`npm test` covers schedules/rollover, backward compatibility, captured points, date boundaries, all-time totals, milestone validation, rank thresholds, merge conflicts and error guidance. PostgreSQL permission tests use PGlite with a minimal Supabase auth fixture, execute the actual SQL scripts, and verify owner/guest/stranger behavior and revocation. This does not replace testing deployed policies or Supabase Auth email delivery.
+
+After applying the SQL and deploying, verify parent sync with two devices, then sign in as Family in a separate browser profile. Confirm shared missions are visible, checkboxes disabled and only a guest account panel is available. Check Treasury date filtering and reward thresholds. Revoke access as the parent and confirm the guest loses the shared view. A different parent account must see only its own data. Existing open/cached older app versions should be refreshed before testing captured awards and the new permission model.
